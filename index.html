@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TokenGenius AI</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+</head>
+
+<body class="bg-black text-white">
+
+<section class="text-center py-16">
+  <h1 class="text-5xl font-bold">TokenGenius AI</h1>
+  <p class="text-gray-400 mt-4">Gere nomes de tokens e desbloqueie PRO via USDT</p>
+</section>
+
+<div class="max-w-4xl mx-auto p-6">
+
+<p id="planInfo" class="mb-4 text-gray-400"></p>
+
+<input id="tema" placeholder="Digite um nicho" class="w-full p-3 text-black rounded mb-4">
+
+<button onclick="gerar()" class="w-full bg-green-500 py-3 rounded-xl mb-3">Gerar nomes</button>
+
+<button onclick="connectWallet()" class="w-full bg-blue-500 py-3 rounded-xl mb-2">Conectar Wallet</button>
+<button onclick="payUSDT()" class="w-full bg-yellow-500 py-3 rounded-xl">Pagar PRO com USDT</button>
+
+<div id="result" class="mt-6 space-y-3"></div>
+
+</div>
+
+<script>
+let user = { plan:'free', uses:0 };
+let provider, signer, userAddress;
+
+const USDT_CONTRACT = "0xdAC17F958D2ee523a2206206994597C13D831ec7"; // Ethereum
+const RECEIVER = "0xSEU_ENDERECO";
+const PRICE = ethers.utils.parseUnits("10", 6); // 10 USDT
+
+const abi = [
+  "function transfer(address to, uint amount) returns (bool)"
+];
+
+function updateUI(){
+ document.getElementById('planInfo').innerText = `Plano: ${user.plan.toUpperCase()} | Usos: ${user.uses}`;
+}
+updateUI();
+
+async function connectWallet(){
+ if(window.ethereum){
+  provider = new ethers.providers.Web3Provider(window.ethereum);
+  await provider.send("eth_requestAccounts", []);
+  signer = provider.getSigner();
+  userAddress = await signer.getAddress();
+  alert("Wallet conectada: " + userAddress);
+ }
+}
+
+async function payUSDT(){
+ if(!signer){ alert('Conecte wallet'); return; }
+
+ const contract = new ethers.Contract(USDT_CONTRACT, abi, signer);
+
+ try{
+  const tx = await contract.transfer(RECEIVER, PRICE);
+  await tx.wait();
+
+  user.plan = 'pro';
+  alert('Pagamento confirmado! PRO liberado 🚀');
+  updateUI();
+
+ }catch(e){
+  alert('Erro no pagamento');
+ }
+}
+
+function gerar(){
+ if(user.plan==='free' && user.uses>=5){ alert('Limite FREE'); return; }
+
+ const tema = document.getElementById('tema').value;
+ if(!tema){ alert('Digite algo'); return; }
+
+ const patterns = [`${tema} AI`,`${tema} Labs`,`${tema} Chain`,`${tema} Finance`];
+ const premium = ['Nova','Quantum','Hyper','Meta'];
+
+ let html='';
+
+ for(let i=0;i<5;i++){
+  const name = premium[Math.floor(Math.random()*premium.length)] + ' ' + patterns[Math.floor(Math.random()*patterns.length)];
+  const ticker = tema.substring(0,3).toUpperCase()+Math.floor(Math.random()*100);
+
+  html += `<div class="bg-gray-900 p-4 rounded flex justify-between">
+  <div><b>${name}</b><br>${ticker}</div>
+  <button onclick="copy('${name}','${ticker}')">Copiar</button>
+  </div>`;
+ }
+
+ document.getElementById('result').innerHTML = html;
+ user.uses++;
+ updateUI();
+}
+
+function copy(n,t){
+ navigator.clipboard.writeText(n+' '+t);
+ alert('Copiado');
+}
+
+</script>
+
+</body>
+</html>
