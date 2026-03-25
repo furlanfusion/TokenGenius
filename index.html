@@ -12,7 +12,6 @@
 
 <section class="text-center py-16">
   <h1 class="text-5xl font-bold">TokenGenius AI</h1>
-  <p class="text-gray-400 mt-4">Gere nomes de tokens e desbloqueie PRO via USDT</p>
 </section>
 
 <div class="max-w-4xl mx-auto p-6">
@@ -32,11 +31,12 @@
 
 <script>
 let user = { plan:'free', uses:0 };
-let provider, signer, userAddress;
+let provider, signer;
 
-const USDT_CONTRACT = "0xdAC17F958D2ee523a2206206994597C13D831ec7"; // Ethereum
+// ⚠️ USE REDE CORRETA (Polygon exemplo)
+const USDT_CONTRACT = "0x3813e82e6f7098b9583FC0F33a962D02018B6803"; // USDT Polygon
 const RECEIVER = "0x0a21dd19cdf0d7400b370f54e88c669bccd63e4b";
-const PRICE = ethers.utils.parseUnits("10", 6); // 10 USDT
+const PRICE = ethers.utils.parseUnits("1", 6); // 1 USDT
 
 const abi = [
   "function transfer(address to, uint amount) returns (bool)"
@@ -47,22 +47,34 @@ function updateUI(){
 }
 updateUI();
 
+// 🔥 CORRIGIDO: conexão wallet
 async function connectWallet(){
- if(window.ethereum){
+ try{
+  if(!window.ethereum){
+    alert('Instale MetaMask');
+    return;
+  }
+
   provider = new ethers.providers.Web3Provider(window.ethereum);
   await provider.send("eth_requestAccounts", []);
   signer = provider.getSigner();
-  userAddress = await signer.getAddress();
-  alert("Wallet conectada: " + userAddress);
+
+  const addr = await signer.getAddress();
+  alert("Conectado: " + addr);
+
+ }catch(e){
+  console.error(e);
+  alert('Erro ao conectar wallet');
  }
 }
 
+// 🔥 CORRIGIDO: pagamento
 async function payUSDT(){
- if(!signer){ alert('Conecte wallet'); return; }
-
- const contract = new ethers.Contract(USDT_CONTRACT, abi, signer);
-
  try{
+  if(!signer){ alert('Conecte a wallet primeiro'); return; }
+
+  const contract = new ethers.Contract(USDT_CONTRACT, abi, signer);
+
   const tx = await contract.transfer(RECEIVER, PRICE);
   await tx.wait();
 
@@ -71,14 +83,20 @@ async function payUSDT(){
   updateUI();
 
  }catch(e){
-  alert('Erro no pagamento');
+  console.error(e);
+  alert('Erro no pagamento (verifique rede e saldo)');
  }
 }
 
+// 🔥 CORRIGIDO: bloqueio funcionando
 function gerar(){
- if(user.plan==='free' && user.uses>=5){ alert('Limite FREE'); return; }
 
- const tema = document.getElementById('tema').value;
+ if(user.plan === 'free' && user.uses >= 5){
+  alert('Limite FREE atingido — pague para liberar');
+  return;
+ }
+
+ const tema = document.getElementById('tema').value.trim();
  if(!tema){ alert('Digite algo'); return; }
 
  const patterns = [`${tema} AI`,`${tema} Labs`,`${tema} Chain`,`${tema} Finance`];
@@ -97,7 +115,9 @@ function gerar(){
  }
 
  document.getElementById('result').innerHTML = html;
- user.uses++;
+
+ // 🔥 IMPORTANTE: incrementa depois
+ user.uses = user.uses + 1;
  updateUI();
 }
 
